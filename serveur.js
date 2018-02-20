@@ -1,36 +1,86 @@
 #!/usr/bin/env node
 
 var Twitter = require('twitter');
-const program = require('commander')
+const program = require('commander');
+var config = require('./config');
+var express = require('express');
+mongoose = require('mongoose');
+http = require('http');
+const pug = require('pug')
 
+var twitter = new Twitter(config);
+var app = express()
+var port = process.env.PORT || 81
+// mongoose.connect('mongodb://localhost/node_twitter')
 
-var twitter = new Twitter({
-    consumer_key: 'y7UVM1GSCsEePysM1d9b81Kjd',
-    consumer_secret: '1yncOY2g3PoF2bXowZmk6UcIaoRTYp5XVWRUqMPmDhBYgklVTo',
-    access_token_key: '379700834-ehvg47TIcNZnKkrjJX0Ik6E0fFj4duIgSRbnpXRi',
-    access_token_secret: 'pYfPfJLicHcVnivOoBunR8E3Ujvr6NhmaJJ9DuWpyJMcx'
-});
+let contain = {/* user: "name", id: "id", text: "text", create: "created_at"*/}
+let tweets = [contain]
+const tplIndexPath = './index.pug'
+const renderIndex = pug.compileFile(tplIndexPath)
 
 program
  .version('1.0.0')
  .option('-h, --hashtag [hashtag]', 'Hashtag recherché')
-
+ .option('-c, --console [hashtag]', 'Hashtag recherché en console')
  program.parse(process.argv)
 
+ 
 
- if (program.hashtag){
+if (program.hashtag){
     var params = {
         q: `${program.hashtag}`,
-        count: 3
+        count: 3000
+        }
+        twitter.get('search/tweets', params,searchedData);
+    
+        function searchedData(err, data, response) 
+        {
+            app.get('/', (req, res) =>  {
+                const obj = data.statuses.map(elem => (
+                {
+                    user: elem.user.name,
+                    id: elem.id,
+                    text: elem.text,
+                    create: elem.created_at
+                }))
+                const html = renderIndex({
+                    "tweets": obj
+                    })
+                res.write(html)
+                //res.json(obj)
+            })
+        }
+ }
+ else if(program.console){
+    var params = {
+        q: `${program.hashtag}`,
+        count: 3000
         }
         twitter.get('search/tweets', params,searchedData);
     
         function searchedData(err, data, response) {
-            console.log(data);
+            const obj = data.statuses.map(elem => ({
+                user: elem.user.name,
+                id: elem.id,
+                text: elem.text,
+                create: elem.created_at
+            }))
+            console.log(obj);
             }
- }
+            }
+ 
 
 
+ var server = http.createServer(app).listen(port, function() {
+    console.log('Express server listening on port ' + port);
+  });
+
+ 
+
+
+  var io = require('socket.io').listen(server);
+
+ 
 /*var params = {
     q: 'test',
     count: 100
