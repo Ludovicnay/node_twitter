@@ -3,58 +3,30 @@
 var Twitter = require('twitter');
 const program = require('commander');
 var config = require('./config');
-var express = require('express');
-mongoose = require('mongoose');
-http = require('http');
-const pug = require('pug')
+streamHandler = require('./utils/streamHandler');
+
+
 
 var twitter = new Twitter(config);
-var app = express()
-var port = process.env.PORT || 81
-// mongoose.connect('mongodb://localhost/node_twitter')
 
-let contain = {/* user: "name", id: "id", text: "text", create: "created_at"*/}
-let tweets = [contain]
-const tplIndexPath = './index.pug'
-const renderIndex = pug.compileFile(tplIndexPath)
+const inquirer = require('inquirer')
+//  let tweets = [contain]
+
 
 program
  .version('1.0.0')
  .option('-h, --hashtag [hashtag]', 'Hashtag recherché')
  .option('-c, --console [hashtag]', 'Hashtag recherché en console')
+ .option('-s, --stream [hashtag]', 'Streaming sur le hashtag')
+ .option('-u, --user , écoute le hashtag user')
  program.parse(process.argv)
 
  
 
-if (program.hashtag){
+if(program.console){
     var params = {
         q: `${program.hashtag}`,
-        count: 3000
-        }
-        twitter.get('search/tweets', params,searchedData);
-    
-        function searchedData(err, data, response) 
-        {
-            app.get('/', (req, res) =>  {
-                const obj = data.statuses.map(elem => (
-                {
-                    user: elem.user.name,
-                    id: elem.id,
-                    text: elem.text,
-                    create: elem.created_at
-                }))
-                const html = renderIndex({
-                    "tweets": obj
-                    })
-                res.write(html)
-                //res.json(obj)
-            })
-        }
- }
- else if(program.console){
-    var params = {
-        q: `${program.hashtag}`,
-        count: 3000
+        count: 30
         }
         twitter.get('search/tweets', params,searchedData);
     
@@ -68,25 +40,50 @@ if (program.hashtag){
             console.log(obj);
             }
             }
- 
+ else if(program.stream){
+    var params = {
+        q: `${program.hashtag}`,
+        count: 30
+        }
+        console.log('test1');
+           var stream = twitter.stream('statuses/filter', params)
+           console.log('test2');
+            stream.on('tweet', function (tweet) {
+                console.log('test3');
+              console.log(tweet)
+    });
+}
+else if(program.user){
+    inquirer.prompt([
+        {
+        type: 'input',
+        message: 'Entrez le #',
+        name: 'hashtag'
+        }, 
+        {
+        type: 'input',
+        message: 'Entrez le nombre de ligne désiré',
+        name: 'count'
+        }
+    ]).then((answers) => {
+    var params = {
+        q: answers.hashtag,
+        count: answers.count
+        }
+        twitter.get('search/tweets', params,searchedData);
+        function searchedData(err, data, response) {
+            const obj = data.statuses.map(elem => ({
+                user: elem.user.name,
+                id: elem.id,
+                text: elem.text,
+                create: elem.created_at
+            }))
+            console.log(obj);
+        }
+    })
+}
+    
 
 
- var server = http.createServer(app).listen(port, function() {
-    console.log('Express server listening on port ' + port);
-  });
 
- 
-
-
-  var io = require('socket.io').listen(server);
-
- 
-/*var params = {
-    q: 'test',
-    count: 100
-    }
-    twitter.get('search/tweets', params,searchedData);
-
-    function searchedData(err, data, response) {
-        console.log(data);
-        }*/
+    
